@@ -1,71 +1,51 @@
-import { z } from 'zod';
-import { execLark } from './utils.js';
+import { z, execLark } from './utils.js';
 
-// Spreadsheet tools
 export const sheetsTools = [
   {
     name: 'lark_sheets_create',
-    description: 'Create a new spreadsheet',
+    description: 'Create a spreadsheet',
     schema: {
-      title: z.string().describe('Title of the spreadsheet'),
+      title: z.string().describe('Spreadsheet title'),
       folder_token: z.string().optional().describe('Parent folder token'),
-      profile: z.string().optional().describe('Profile name'),
+      profile: z.string().optional().describe('Profile name (bot identity)'),
     },
-    handler: async ({ title, folder_token, profile }) => {
-      const args = ['sheets', 'create', '--title', title, '--format', 'json'];
-      if (folder_token) args.push('--folder-token', folder_token);
-      if (profile) args.push('--profile', profile);
-      return execLark(args);
-    },
+    handler: async ({ profile, title, folder_token }) =>
+      execLark(['sheets', 'create', '--title', title, ...(folder_token ? ['--folder', folder_token] : [])], profile),
   },
   {
     name: 'lark_sheets_read',
-    description: 'Read data from a spreadsheet',
+    description: 'Read sheet data with optional range',
     schema: {
-      spreadsheet_token: z.string().describe('Spreadsheet token'),
-      sheet_id: z.string().optional().describe('Sheet ID (uses first sheet if not specified)'),
-      range: z.string().optional().describe('Range to read (e.g., "A1:C10")'),
-      profile: z.string().optional().describe('Profile name'),
+      token: z.string().describe('Spreadsheet token'),
+      range: z.string().optional().describe('Cell range (e.g. A1:C10)'),
+      sheet_id: z.string().optional().describe('Sheet ID/tab name'),
+      profile: z.string().optional().describe('Profile name (bot identity)'),
     },
-    handler: async ({ spreadsheet_token, sheet_id, range, profile }) => {
-      const args = ['sheets', 'read', spreadsheet_token, '--format', 'json'];
-      if (sheet_id) args.push('--sheet-id', sheet_id);
-      if (range) args.push('--range', range);
-      if (profile) args.push('--profile', profile);
-      return execLark(args);
-    },
+    handler: async ({ profile, token, range, sheet_id }) =>
+      execLark(['sheets', 'read', '--token', token, ...(range ? ['--range', range] : []), ...(sheet_id ? ['--sheet', sheet_id] : [])], profile),
   },
   {
     name: 'lark_sheets_write',
-    description: 'Write data to a spreadsheet',
+    description: 'Write 2D array data to a range',
     schema: {
-      spreadsheet_token: z.string().describe('Spreadsheet token'),
-      sheet_id: z.string().optional().describe('Sheet ID'),
-      range: z.string().describe('Range to write (e.g., "A1:C3")'),
-      data: z.array(z.array(z.any())).describe('2D array of data to write'),
-      profile: z.string().optional().describe('Profile name'),
+      token: z.string().describe('Spreadsheet token'),
+      range: z.string().describe('Target range (e.g. A1:C10)'),
+      data: z.string().describe('JSON 2D array of values'),
+      profile: z.string().optional().describe('Profile name (bot identity)'),
     },
-    handler: async ({ spreadsheet_token, sheet_id, range, data, profile }) => {
-      const args = ['sheets', 'write', spreadsheet_token, '--range', range, '--data', JSON.stringify(data), '--format', 'json'];
-      if (sheet_id) args.push('--sheet-id', sheet_id);
-      if (profile) args.push('--profile', profile);
-      return execLark(args);
-    },
+    handler: async ({ profile, token, range, data }) =>
+      execLark(['sheets', 'write', '--token', token, '--range', range, '--data', data], profile),
   },
   {
     name: 'lark_sheets_append',
-    description: 'Append rows to a spreadsheet',
+    description: 'Append rows to a sheet',
     schema: {
-      spreadsheet_token: z.string().describe('Spreadsheet token'),
-      sheet_id: z.string().optional().describe('Sheet ID'),
-      data: z.array(z.array(z.any())).describe('2D array of rows to append'),
-      profile: z.string().optional().describe('Profile name'),
+      token: z.string().describe('Spreadsheet token'),
+      range: z.string().optional().describe('Target range for append'),
+      data: z.string().describe('JSON 2D array of values'),
+      profile: z.string().optional().describe('Profile name (bot identity)'),
     },
-    handler: async ({ spreadsheet_token, sheet_id, data, profile }) => {
-      const args = ['sheets', 'append', spreadsheet_token, '--data', JSON.stringify(data), '--format', 'json'];
-      if (sheet_id) args.push('--sheet-id', sheet_id);
-      if (profile) args.push('--profile', profile);
-      return execLark(args);
-    },
+    handler: async ({ profile, token, range, data }) =>
+      execLark(['sheets', 'append', '--token', token, '--data', data, ...(range ? ['--range', range] : [])], profile),
   },
 ];

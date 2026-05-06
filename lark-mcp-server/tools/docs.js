@@ -1,65 +1,44 @@
-import { z } from 'zod';
-import { execLark } from './utils.js';
+import { z, execLark } from './utils.js';
 
-// Document tools
 export const docsTools = [
   {
     name: 'lark_doc_create',
-    description: 'Create a new Lark document',
+    description: 'Create a document. Optionally provide content and folder token.',
     schema: {
-      title: z.string().describe('Title of the document'),
-      content: z.string().optional().describe('Initial content (markdown supported)'),
+      title: z.string().describe('Document title'),
+      content: z.string().optional().describe('Document content (markdown)'),
       folder_token: z.string().optional().describe('Parent folder token'),
-      profile: z.string().optional().describe('Profile name'),
+      profile: z.string().optional().describe('Profile name (bot identity)'),
     },
-    handler: async ({ title, content, folder_token, profile }) => {
-      const args = ['doc', 'create', '--title', title, '--format', 'json'];
-      if (content) args.push('--content', content);
-      if (folder_token) args.push('--folder-token', folder_token);
-      if (profile) args.push('--profile', profile);
-      return execLark(args);
-    },
+    handler: async ({ profile, title, content, folder_token }) =>
+      execLark(['docs', 'create', '--title', title, ...(content ? ['--content', content] : []), ...(folder_token ? ['--folder', folder_token] : [])], profile),
   },
   {
     name: 'lark_doc_read',
-    description: 'Read document content',
+    description: 'Read document content by token',
     schema: {
-      doc_token: z.string().describe('Document token'),
-      profile: z.string().optional().describe('Profile name'),
+      token: z.string().describe('Document token'),
+      profile: z.string().optional().describe('Profile name (bot identity)'),
     },
-    handler: async ({ doc_token, profile }) => {
-      const args = ['doc', 'read', doc_token, '--format', 'json'];
-      if (profile) args.push('--profile', profile);
-      return execLark(args);
-    },
+    handler: async ({ profile, token }) => execLark(['docs', 'read', '--token', token], profile),
   },
   {
     name: 'lark_doc_update',
-    description: 'Update an existing document',
+    description: 'Update document content',
     schema: {
-      doc_token: z.string().describe('Document token'),
-      content: z.string().describe('New content (markdown supported)'),
-      profile: z.string().optional().describe('Profile name'),
+      token: z.string().describe('Document token'),
+      content: z.string().describe('New content (markdown)'),
+      profile: z.string().optional().describe('Profile name (bot identity)'),
     },
-    handler: async ({ doc_token, content, profile }) => {
-      const args = ['doc', 'update', doc_token, '--content', content, '--format', 'json'];
-      if (profile) args.push('--profile', profile);
-      return execLark(args);
-    },
+    handler: async ({ profile, token, content }) => execLark(['docs', 'update', '--token', token, '--content', content], profile),
   },
   {
     name: 'lark_doc_search',
-    description: 'Search for documents',
+    description: 'Search documents by query',
     schema: {
       query: z.string().describe('Search query'),
-      page_size: z.number().optional().describe('Number of results per page'),
-      profile: z.string().optional().describe('Profile name'),
+      profile: z.string().optional().describe('Profile name (bot identity)'),
     },
-    handler: async ({ query, page_size, profile }) => {
-      const args = ['doc', 'search', '--query', query, '--format', 'json'];
-      if (page_size) args.push('--page-size', String(page_size));
-      if (profile) args.push('--profile', profile);
-      return execLark(args);
-    },
+    handler: async ({ profile, query }) => execLark(['docs', 'search', '--query', query], profile),
   },
 ];

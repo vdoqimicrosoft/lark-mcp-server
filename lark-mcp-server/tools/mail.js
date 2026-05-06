@@ -1,57 +1,38 @@
-import { z } from 'zod';
-import { execLark } from './utils.js';
+import { z, execLark } from './utils.js';
 
-// Mail tools
 export const mailTools = [
   {
     name: 'lark_mail_send',
-    description: 'Send an email',
+    description: 'Send an email with optional cc, bcc',
     schema: {
-      to: z.array(z.string()).describe('Recipient email addresses'),
+      to: z.string().describe('Recipient email'),
       subject: z.string().describe('Email subject'),
-      body: z.string().describe('Email body content'),
-      cc: z.array(z.string()).optional().describe('CC email addresses'),
-      bcc: z.array(z.string()).optional().describe('BCC email addresses'),
-      attachments: z.array(z.string()).optional().describe('File tokens for attachments'),
-      profile: z.string().optional().describe('Profile name'),
+      body: z.string().describe('Email body'),
+      cc: z.string().optional().describe('CC recipients (comma-separated)'),
+      bcc: z.string().optional().describe('BCC recipients (comma-separated)'),
+      profile: z.string().optional().describe('Profile name (bot identity)'),
     },
-    handler: async ({ to, subject, body, cc, bcc, attachments, profile }) => {
-      const args = ['mail', 'send', '--to', to.join(','), '--subject', subject, '--body', body, '--format', 'json'];
-      if (cc && cc.length > 0) args.push('--cc', cc.join(','));
-      if (bcc && bcc.length > 0) args.push('--bcc', bcc.join(','));
-      if (attachments && attachments.length > 0) args.push('--attachments', attachments.join(','));
-      if (profile) args.push('--profile', profile);
-      return execLark(args);
-    },
+    handler: async ({ profile, to, subject, body, cc, bcc }) =>
+      execLark(['mail', 'send', '--to', to, '--subject', subject, '--body', body, ...(cc ? ['--cc', cc] : []), ...(bcc ? ['--bcc', bcc] : [])], profile),
   },
   {
     name: 'lark_mail_read',
     description: 'Read an email',
     schema: {
-      mail_id: z.string().describe('Email ID'),
-      profile: z.string().optional().describe('Profile name'),
+      message_id: z.string().describe('Email message ID'),
+      profile: z.string().optional().describe('Profile name (bot identity)'),
     },
-    handler: async ({ mail_id, profile }) => {
-      const args = ['mail', 'read', mail_id, '--format', 'json'];
-      if (profile) args.push('--profile', profile);
-      return execLark(args);
-    },
+    handler: async ({ profile, message_id }) => execLark(['mail', 'read', '--message', message_id], profile),
   },
   {
     name: 'lark_mail_search',
-    description: 'Search emails',
+    description: 'Search emails by folder/query',
     schema: {
       query: z.string().describe('Search query'),
-      folder: z.string().optional().describe('Mail folder (inbox, sent, drafts, etc.)'),
-      page_size: z.number().optional().describe('Number of results per page'),
-      profile: z.string().optional().describe('Profile name'),
+      folder: z.string().optional().describe('Folder name'),
+      profile: z.string().optional().describe('Profile name (bot identity)'),
     },
-    handler: async ({ query, folder, page_size, profile }) => {
-      const args = ['mail', 'search', '--query', query, '--format', 'json'];
-      if (folder) args.push('--folder', folder);
-      if (page_size) args.push('--page-size', String(page_size));
-      if (profile) args.push('--profile', profile);
-      return execLark(args);
-    },
+    handler: async ({ profile, query, folder }) =>
+      execLark(['mail', 'search', '--query', query, ...(folder ? ['--folder', folder] : [])], profile),
   },
 ];

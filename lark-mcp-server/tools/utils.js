@@ -1,80 +1,27 @@
-import { spawn } from 'child_process';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { z } from 'zod';
 
-/**
- * Execute a lark-cli command and return the result
- * @param {string[]} args - Command arguments
- * @returns {Promise<{content: Array<{type: string, text: string}>>}
- */
-export async function execLark(args) {
-  return new Promise((resolve) => {
-    const process = spawn('lark-cli', args, {
-      shell: false,
-    });
+const execFileAsync = promisify(execFile);
 
-    let stdout = '';
-    let stderr = '';
+export { z };
 
-    process.stdout.on('data', (data) => {
-      stdout += data.toString();
-    });
-
-    process.stderr.on('data', (data) => {
-      stderr += data.toString();
-    });
-
-    process.on('close', (code) => {
-      if (code === 0) {
-        try {
-          const result = JSON.parse(stdout);
-          resolve({
-            content: [
-              {
-                type: 'text',
-                text: JSON.stringify(result, null, 2),
-              },
-            ],
-          });
-        } catch (e) {
-          // If not JSON, return raw output
-          resolve({
-            content: [
-              {
-                type: 'text',
-                text: stdout || 'Command executed successfully',
-              },
-            ],
-          });
-        }
-      } else {
-        // Handle error
-        const errorMessage = stderr || stdout || `Command failed with exit code ${code}`;
-        resolve({
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify({
-                error: true,
-                message: errorMessage,
-                exitCode: code,
-              }, null, 2),
-            },
-          ],
-        });
+export function execLark(args, profile) {
+  const finalArgs = [...args];
+  if (profile) {
+    finalArgs.push('--profile', profile);
+  }
+  return execFileAsync('lark-cli', finalArgs, { timeout: 30000 })
+    .then(({ stdout }) => {
+      try {
+        const json = JSON.parse(stdout);
+        return { content: [{ type: 'text', text: JSON.stringify(json, null, 2) }] };
+      } catch {
+        return { content: [{ type: 'text', text: stdout }] };
       }
+    })
+    .catch((e) => {
+      const msg = e.stderr || e.message;
+      return { content: [{ type: 'text', text: msg }], isError: true };
     });
-
-    process.on('error', (err) => {
-      resolve({
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify({
-              error: true,
-              message: `Failed to execute lark-cli: ${err.message}. Make sure lark-cli is installed and in PATH.`,
-            }, null, 2),
-          },
-        ],
-      });
-    });
-  });
 }

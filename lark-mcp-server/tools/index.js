@@ -12,7 +12,6 @@ import { contactTools } from './contact.js';
 import { approvalTools } from './approval.js';
 import { apiTools } from './api.js';
 
-// Export all tools as a single array
 export const allTools = [
   ...authTools,
   ...docsTools,
